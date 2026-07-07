@@ -20,6 +20,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	listersv1 "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	pb "github.com/nvidia/nvsentinel/data-models/pkg/protos"
 	"github.com/nvidia/nvsentinel/health-monitors/kubernetes-object-monitor/pkg/config"
@@ -37,9 +39,14 @@ func (f *fakePlatformConnectorClient) HealthEventOccurredV1(
 	return &emptypb.Empty{}, nil
 }
 
+func newEmptyNodeLister() listersv1.NodeLister {
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	return listersv1.NewNodeLister(indexer)
+}
+
 func TestPublishHealthEventIncludesBehaviourOverrides(t *testing.T) {
 	client := &fakePlatformConnectorClient{}
-	pub := New(client, "passthrough:///platform-connector", pb.ProcessingStrategy_EXECUTE_REMEDIATION)
+	pub := New(client, "passthrough:///platform-connector", newEmptyNodeLister(), pb.ProcessingStrategy_EXECUTE_REMEDIATION)
 
 	policy := &config.Policy{
 		Name: "operator-pod-unhealthy",
